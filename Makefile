@@ -1,0 +1,47 @@
+.PHONY: all clean libs_aarch64
+
+CURRENT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+CARGO_CONFIG := .cargo/config.toml
+OUT_DIR := static_libs
+BUILD_DIR := $(OUT_DIR)/build
+
+all: libs_aarch64 $(CARGO_CONFIG)
+
+ifeq ($(ANDROID_NDK_ROOT),)
+$(error ANDROID_NDK_ROOT variable is not defined)
+endif
+
+ANDROID_API_LEVEL ?= 30
+
+NDK_BIN_PATH := $(ANDROID_NDK_ROOT)/toolchains/llvm/prebuilt/linux-x86_64/bin
+
+AARCH64_PREFIX := aarch64-linux-android
+
+export CC_aarch64_linux_android := $(NDK_BIN_PATH)/$(AARCH64_PREFIX)$(ANDROID_API_LEVEL)-clang
+export CXX_aarch64_linux_android := $(NDK_BIN_PATH)/$(AARCH64_PREFIX)$(ANDROID_API_LEVEL)-clang++
+
+export AR_NDK := $(NDK_BIN_PATH)/llvm-ar
+
+export RUSTFLAGS_aarch64_linux_android := -L$(CURRENT_DIR)/$(OUT_DIR)/$(AARCH64_PREFIX)/lib -L$(NDK_BIN_PATH)/../sysroot/usr/lib/$(AARCH64_PREFIX)/$(ANDROID_API_LEVEL) -L$(NDK_BIN_PATH)/../sysroot/usr/lib/$(AARCH64_PREFIX)/
+
+export STATIC_LIBS_LIBRARY_PATH_aarch64_linux_android := $(CURRENT_DIR)/$(OUT_DIR)/$(AARCH64_PREFIX)/lib:$(NDK_BIN_PATH)/../sysroot/usr/lib/$(AARCH64_PREFIX)/$(ANDROID_API_LEVEL):$(NDK_BIN_PATH)/../sysroot/usr/lib/$(AARCH64_PREFIX)/
+export STATIC_LIBS_LIBRARY_PATH_host := $(shell pkg-config --variable=libdir libelf)
+$(CARGO_CONFIG): .cargo/config_template.toml Makefile
+	CURRENT_DIR=$(CURRENT_DIR) envsubst <.cargo/config_template.toml >$@
+
+$(BUILD_DIR):
+	mkdir -p $@
+
+$(OUT_DIR):
+	mkdir -p $@
+
+libs_aarch64: Makefile_arch
+	$(MAKE) -f $^ \
+		CC=$(CC_aarch64_linux_android) \
+		CXX=$(CXX_aarch64_linux_android) \
+		BUILD_DIR=$(BUILD_DIR)/$(AARCH64_PREFIX) \
+		OUT_DIR=$(OUT_DIR)/$(AARCH64_PREFIX) \
+		HOST=$(AARCH64_PREFIX)
+
+clean:
+	rm -rf $(CARGO_CONFIG) $(OUT_DIR)
