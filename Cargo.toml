@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-libbpf-rs = { git = "https://github.com/amirbou/libbpf-rs.git", features = ["static"], default-features = false }
+libbpf-rs = { version = "0.26.0", features = [
+    "static",
+], default-features = false }
 
 [build-dependencies]
-libbpf-cargo = { git = "https://github.com/amirbou/libbpf-rs.git" }
+libbpf-cargo = { version = "0.26.0" }
